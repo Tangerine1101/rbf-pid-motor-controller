@@ -80,7 +80,7 @@ void teleplot(double time, double signal){
   Serial.print("signal:"); Serial.println(signal);  
 }
 //print system evaluation in Json
-void print_performance(sys_per sys, sys_criteria criteria, unsigned long limit){
+void print_performance(sys_per sys, sys_criteria criteria, double limit){
   if (sys.time_rise > 0.00001) { 
     Serial.println(sys.time_rise);
   }

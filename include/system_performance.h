@@ -26,7 +26,7 @@ struct sys_per {
 void SysPer_init(sys_per* system, sys_criteria* criteria, double setpoint, double Ess, double POT, double Tr, double Tss);
 bool evaluate(sys_per* system, sys_criteria criteria, double val, double runtime);
 void printCSV(float x, float y);
-void print_performance(sys_per sys, sys_criteria criteria, unsigned long limit);
+void print_performance(sys_per sys, sys_criteria criteria, double limit);
 void teleplot(double time, double value);
 
 #endif

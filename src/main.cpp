@@ -14,9 +14,8 @@ void encoderISR(){
 motor myMotor(7, 8, 9, 2, 3, &enCount);
 //pid & system evaluation related
 double Setpoint =200;
-double control_val;
 double signal = myMotor.rpm();
-pid controller(Setpoint, 1, 1, 1, &signal, &control_val);
+pid controller(Setpoint, 1, 1, 1, &signal);
 sys_per outputVal;
 sys_criteria criteria;
 //operate related
@@ -46,9 +45,19 @@ void setup(){
 //---------------------------------------------------------------------------------------------------------------------------------
 void loop() {
   unsigned long t = millis();
+  while(runtime() < 5000 && flag_run_end == 0) {
+    if(controller.tuning() == 1){
+      controller.pidCompute();
+      evaluate(&outputVal, criteria, myMotor.rpm(), (double)runtime()/1000);
+    }
+    myMotor.control(FORWARD, controller.control_val);
+    teleplot(runtime(), myMotor.rpm());
 
-  signal = myMotor.rpm();
-  while(millis() - t < 1000*SAMPLE_TIME);
-  
+    signal = myMotor.rpm();
+    while(millis() - t < 1000*SAMPLE_TIME);
+  }
+  if (flag_run_end == 0) {
+    print_performance(outputVal, criteria, 5.0);
+  }
 }
 

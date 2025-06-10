@@ -7,12 +7,12 @@
 class pid {
     public:
     //Constructor
-        pid(double _Setpoint, double _Kp, double _Ki, double _Kd, double* _input, double* _output);
+        pid(double _Setpoint, double _Kp, double _Ki, double _Kd, double* _input);
     //controller
         double setpoint, control_val;
     //function
         //controller
-        void pidCompute(double* control_val);
+        void pidCompute();
         void setPID(double _Setpoint, double _Kp, double _Ki, double _Kd);
         //tuner
         void tuneInit(double relayAmp);
@@ -22,7 +22,6 @@ class pid {
     private:
     //controller
         double* input;
-        double* output;
         double kp, ki, kd;
         double error;
         double lastE =0, dE =0, sumE =0;

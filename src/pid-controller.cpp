@@ -1,23 +1,22 @@
 #include <pid-controller.h>
 #include <Arduino.h>
 
-pid::pid(double _Setpoint, double _Kp, double _Ki, double _Kd, double* _input, double* _output){
+pid::pid(double _Setpoint, double _Kp, double _Ki, double _Kd, double* _input){
     kp = _Kp;
     ki = _Ki;
     kd = _Kd;
     setpoint = _Setpoint;
     this->input = _input;
-    this->output = _output;
 }
 
-void pid::pidCompute(double* control_val){
+void pid::pidCompute(){
     error = setpoint - *input;
-    *control_val = kp*error + ki*sumE + kd*dE;
-    if (*control_val < 0) {
-        *control_val = 0;
+    control_val = kp*error + ki*sumE + kd*dE;
+    if (control_val < 0) {
+        control_val = 0;
     }
-    else if(*control_val > 1000){
-        *control_val = 1000;
+    else if(control_val > 1000){
+        control_val = 1000;
     }
     sumE += error*dt;
     dE = (error- lastE )/dt;
@@ -41,9 +40,10 @@ void pid::tuneInit(double relayAmp){
     peakMin = setpoint;
 }
 bool pid::tuning(){
+    if(tuneState ==1) return 1;
     unsigned long now = millis();
-    if (*input < setpoint) {*output = relayH;}
-    else {*output = 0;}
+    if (*input < setpoint) {control_val = relayH;}
+    else {control_val = 0;}
     //save overshoot and undershoot
     if(*input > peakMax) peakMax = *input;
     if(*input < peakMin) peakMin = *input;
@@ -66,7 +66,7 @@ bool pid::tuning(){
             setPID(setpoint,_Kp,_Ki,_Kd);
             //reset and announce tuning success
             tuneState = 0;
-            *output = 0;
+            control_val = 0;
             return true;
         }
         //in case there is no peak last time, save time for another peak
@@ -80,7 +80,7 @@ bool pid::tuning(){
 }
 void pid::tuneCancel(){
     tuneState = 0;
-    *output = 0;
+    control_val = 0;
     peakTime =0; peakMax =0; peakMin =0;
 }
 void pid::getPID(double* _Kp, double* _Ki, double* _Kd){
