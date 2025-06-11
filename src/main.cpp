@@ -32,32 +32,32 @@ unsigned long runtime() {
 //---------------------------------------------------------------------------------------------------------------------------------
 void setup(){
   Serial.begin(9600);
-  while(!Serial);
   //CHANGE CRITERIA HERE:
   SysPer_init(&outputVal, &criteria, Setpoint, 2, 1, 0.1, 0.1); //sys_per struct, sys_criteria struct, setpoint, Steady-state error, overshoot(%), time rise(s), time settle(s)
   myMotor.init();
   myMotor.config(15e3, LOW_PASS);
   attachInterrupt(digitalPinToInterrupt(myMotor.enA), encoderISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(myMotor.enB), encoderISR, CHANGE);
- // setPwmFrequency(15000.00);
+
+  while(!Serial);  
   wait = millis();
   }
 //---------------------------------------------------------------------------------------------------------------------------------
 void loop() {
   unsigned long t = millis();
-  while(runtime() < 5000 && flag_run_end == 0) {
+  unsigned long r = runtime();
     if(controller.tuning() == 1){
       controller.pidCompute();
       evaluate(&outputVal, criteria, myMotor.rpm(), (double)runtime()/1000);
     }
     myMotor.control(FORWARD, controller.control_val);
-    teleplot(runtime(), myMotor.rpm());
+    teleplot(runtime(), controller.control_val);
 
     signal = myMotor.rpm();
     while(millis() - t < 1000*SAMPLE_TIME);
-  }
-  if (flag_run_end == 0) {
+  /*if (flag_run_end == 0) {
     print_performance(outputVal, criteria, 5.0);
-  }
+    flag_run_end =1;
+  }*/
 }
 

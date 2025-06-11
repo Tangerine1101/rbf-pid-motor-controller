@@ -69,7 +69,7 @@ class motor {
     void init();
   private:
     int rpm_mode =0;
-    int topValue =0;
+    int topValue =255;
     double buffer[FILTER_MODE];
     int filterCount =0;
 };
