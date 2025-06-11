@@ -31,14 +31,14 @@ unsigned long runtime() {
 }
 //---------------------------------------------------------------------------------------------------------------------------------
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(115200);
   //CHANGE CRITERIA HERE:
   SysPer_init(&outputVal, &criteria, Setpoint, 2, 1, 0.1, 0.1); //sys_per struct, sys_criteria struct, setpoint, Steady-state error, overshoot(%), time rise(s), time settle(s)
   myMotor.init();
-  myMotor.config(15e3, LOW_PASS);
+  myMotor.config(15e3, NO_FILTER);
   attachInterrupt(digitalPinToInterrupt(myMotor.enA), encoderISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(myMotor.enB), encoderISR, CHANGE);
-
+  controller.tuneInit(1000);
   while(!Serial);  
   wait = millis();
   }
@@ -51,13 +51,14 @@ void loop() {
       evaluate(&outputVal, criteria, myMotor.rpm(), (double)runtime()/1000);
     }
     myMotor.control(FORWARD, controller.control_val);
-    teleplot(runtime(), controller.control_val);
+    printCSV((double)millis()/1000, (double)myMotor.lastMeasure/1000);
 
     signal = myMotor.rpm();
-    while(millis() - t < 1000*SAMPLE_TIME);
+  while((millis() - t) <= 1000*SAMPLE_TIME);
   /*if (flag_run_end == 0) {
     print_performance(outputVal, criteria, 5.0);
     flag_run_end =1;
   }*/
 }
+
 

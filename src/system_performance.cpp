@@ -76,8 +76,10 @@ void printCSV(float x, float y) {
 }
 //for teleplot extension
 void teleplot(double time, double signal){
+  if(time >= 0.0001 && signal >= 0.0001 ){
   Serial.print(">time:"); Serial.println(time);
-  Serial.print(">signal:"); Serial.println(signal);  
+  Serial.print(">signal:"); Serial.println(signal); 
+  } 
 }
 //print system evaluation in Json
 void print_performance(sys_per sys, sys_criteria criteria, double limit){

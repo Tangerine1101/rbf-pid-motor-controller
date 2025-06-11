@@ -1,6 +1,7 @@
 #include <pid-controller.h>
 #include <Arduino.h>
 
+
 pid::pid(double _Setpoint, double _Kp, double _Ki, double _Kd, double* _input){
     kp = _Kp;
     ki = _Ki;
@@ -11,13 +12,8 @@ pid::pid(double _Setpoint, double _Kp, double _Ki, double _Kd, double* _input){
 
 void pid::pidCompute(){
     error = setpoint - *input;
-    control_val = kp*error + ki*sumE + kd*dE;
-    if (control_val < 0) {
-        control_val = 0;
-    }
-    else if(control_val > 1000){
-        control_val = 1000;
-    }
+    double pid_val = kp*error + ki*sumE + kd*dE;
+    control_val = (pid_val, -1000, 1000);
     sumE += error*dt;
     dE = (error- lastE )/dt;
     lastE = error;
@@ -32,7 +28,7 @@ void pid::setPID(double _Setpoint, double _Kp, double _Ki, double _Kd){
 }
 
 void pid::tuneInit(double relayAmp){
-    relayH = relayAmp;
+    this->relayH = relayAmp;
     tuneState = 1;
     lastInput = 0;
     peakTime = 0;
@@ -67,6 +63,7 @@ bool pid::tuning(){
             //reset and announce tuning success
             tuneState = 0;
             control_val = 0;
+            getTune();
             return true;
         }
         //in case there is no peak last time, save time for another peak
@@ -99,9 +96,7 @@ void motor::init(){
 }
 void motor::setPwmFrequency(double frequency) {
   topValue = (int)((16000000.0 / frequency) - 1.0);
-  
-  pinMode(9, OUTPUT);
-  pinMode(10, OUTPUT);
+
   TCCR1A = 0;
   TCCR1B = 0;
   TCCR1A |= (1 << COM1A1) | (1 << COM1B1);
@@ -144,7 +139,11 @@ double motor::rpm(){
   interrupts();
   double dt = (double)(now - lastMeasure)*0.001;
   long pulseDiff = getEnc - lastEnc;
-  double u = ((double)pulseDiff*60)/(4*11*9.6*dt);
+  double u =0;
+  if (dt >= 1e-6 && pulseDiff >= 0.1){
+  u = ((double)pulseDiff*60)/(4*11*9.6*dt);
+  }
+  else return 0.0001;
   switch (rpm_mode)
   {
   case 1:
@@ -152,6 +151,7 @@ double motor::rpm(){
     break;
   case 2:
     filter_lowpass(&u);
+    break;
   default:
     break;
   }
@@ -190,4 +190,12 @@ void motor::filter_lowpass(double* val){
 void motor::config(double frequency, int filterMode){
   rpm_mode = filterMode;
   setPwmFrequency(frequency);
+}
+void pid::getTune(){
+  double Kp, Ki, Kd;
+  getPID(&Kp, &Ki, &Kd);
+  Serial.println("Tuned!");
+  Serial.print("Kp:"); Serial.println(Kp);
+  Serial.print("Ki:"); Serial.println(Ki);
+  Serial.print("Kd:"); Serial.println(Kd);
 }

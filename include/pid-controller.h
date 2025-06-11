@@ -19,7 +19,8 @@ class pid {
         bool tuning();
         void tuneCancel();
         void getPID(double* _Kp, double* _Ki, double* _Kd);
-    private:
+        void getTune();
+        private:
     //controller
         double* input;
         double kp, ki, kd;
@@ -27,10 +28,11 @@ class pid {
         double lastE =0, dE =0, sumE =0;
         const double dt = SAMPLE_TIME; 
     //tuner
+        unsigned long now =0;
         bool tuneState =0;
         double peakMax =1e-9;
         double peakMin =1e-9;
-        double relayH; //control value at high
+        double relayH = 255; //control value at high
         double lastInput =1e-9;
         double peakTime = 1e-9;
         double Tu = 1e-9;
