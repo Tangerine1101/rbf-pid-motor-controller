@@ -57,7 +57,7 @@ bool evaluate(sys_per* system, sys_criteria criteria, double val, double runtime
     system->time_settle = runtime;
     system->flag_settle = 1;
   }
-  else if(val < criteria.setpoint*(1- 2*rate) || val > criteria.setpoint*(1 + 2*rate)){
+  else if(val < criteria.setpoint*(1- rate) || val > criteria.setpoint*(1 + rate)){
     system->flag_settle = 0;
   }
   //return value
@@ -76,18 +76,11 @@ void printCSV(float x, float y) {
 }
 //for teleplot extension
 void teleplot(double time, double signal){
-  if(time >= 0.0001 && signal >= 0.0001 ){
   Serial.print(">time:"); Serial.println(time);
   Serial.print(">signal:"); Serial.println(signal); 
-  } 
 }
 //print system evaluation in Json
 void print_performance(sys_per sys, sys_criteria criteria, double limit){
-  if (sys.time_rise > 0.00001) { 
-    Serial.println(sys.time_rise);
-  }
-  else {Serial.println("nan"); }
-
   Serial.println(" {\"evaluation\":{");
   Serial.print("\"steady state error\":");Serial.print("\"");Serial.print(sys.final_error);Serial.println("\",");
   Serial.print("\"steady state value\":");Serial.print("\"");Serial.print(sys.final_val);Serial.println("\",");
@@ -102,23 +95,10 @@ void print_performance(sys_per sys, sys_criteria criteria, double limit){
   else Serial.print("inf"); 
   Serial.println("\"");
 
-  Serial.println(" }");
+  Serial.print(" "); Serial.println(" }");
   Serial.println("}");
-/*
-  Serial.println("<evaluation>");
-  Serial.print("steady state error: "); Serial.println(sys.final_error);
-  Serial.print("steady state value: "); Serial.println(sys.final_val);
-  Serial.print("overshoot: "); Serial.println(sys.overshoot);
-  Serial.print("time rise: ");
-  if (sys.time_rise > 0.00001) { 
-    Serial.println(sys.time_rise);
   }
-  else {Serial.println("nan"); }
-
-  Serial.print("time settle: "); 
-  if(sys.time_settle <= limit) {
-    Serial.println(sys.time_settle);
-  }
-  else {Serial.println("inf"); }
-*/
-  }
+bool meetCriteria(sys_per sys, sys_criteria criteria){
+  bool satisfy = sys.overshoot <= criteria.overshoot && sys.final_error <= criteria.final_error && sys.time_rise <= criteria.time_rise && sys.time_settle <= criteria.time_settle;
+  return satisfy;
+}

@@ -28,5 +28,6 @@ bool evaluate(sys_per* system, sys_criteria criteria, double val, double runtime
 void printCSV(float x, float y);
 void print_performance(sys_per sys, sys_criteria criteria, double limit);
 void teleplot(double time, double value);
+bool meetCriteria(sys_per sys, sys_criteria criteria);
 
 #endif

@@ -2,83 +2,142 @@
 #include <Arduino.h>
 
 
-pid::pid(double _Setpoint, double _Kp, double _Ki, double _Kd, double* _input){
-    kp = _Kp;
-    ki = _Ki;
-    kd = _Kd;
+pid::pid(double _Setpoint, double* _input){
     setpoint = _Setpoint;
     this->input = _input;
 }
 
 void pid::pidCompute(){
     error = setpoint - *input;
+    sumE += error;
+    dE = (error- lastE );
+    if (control_val < 1000 && control_val >0)
+    sumE = constrain(sumE, 0, 1000);
+    lowpassFilter(&dE);
     double pid_val = kp*error + ki*sumE + kd*dE;
-    control_val = (pid_val, -1000, 1000);
-    sumE += error*dt;
-    dE = (error- lastE )/dt;
+    control_val = constrain(pid_val, 0, 1000);
     lastE = error;
 }
 
+
+void pid::lowpassFilter(double* val){
+    double signal = *val;
+    filteredDe = signal;
+    signal = (alpha*signal)+((1-alpha)*filteredDe);
+    *val = signal;
+}
 void pid::setPID(double _Setpoint, double _Kp, double _Ki, double _Kd){
     kp = _Kp;
     ki = _Ki;
     kd = _Kd;
     setpoint = _Setpoint;
     lastE =0; dE =0; sumE =0;    
+    filteredDe = 0;
 }
 
-void pid::tuneInit(double relayAmp){
-    this->relayH = relayAmp;
-    tuneState = 1;
-    lastInput = 0;
-    peakTime = 0;
+void pid::tuneInit(double high, double low, ZNmode zn){
+    relayON = high;
+    relayOFF = low;
+    ZN_Mode = zn;
+    ZN_count = 0;
     peakMax = setpoint;
     peakMin = setpoint;
-}
-bool pid::tuning(){
-    if(tuneState ==1) return 1;
-    unsigned long now = millis();
-    if (*input < setpoint) {control_val = relayH;}
-    else {control_val = 0;}
-    //save overshoot and undershoot
-    if(*input > peakMax) peakMax = *input;
-    if(*input < peakMin) peakMin = *input;
-    //detect if output change direction
-    bool crossed_up = (lastInput < setpoint && *input >= setpoint);
-    bool crossed_down = (lastInput > setpoint && *input <= setpoint);
-    
-    if (crossed_up || crossed_down){
-        //compute Ziegler-Nichols if there is a peak last time
-        if (peakTime != 0) {
-            Tu = (double)(now - peakTime)/1000.00;
-            double diffPeak = peakMax - peakMin;
-            if (diffPeak > 1e-4){
-                Ku = (4.0*relayH)/(3.14159*diffPeak);
-            }
-            //compute Kpid
-            double _Kp = 0.6*Ku;
-            double _Ki = (1.2*Ku)/Tu;
-            double _Kd = (0.6*Ku*Tu)/8.0;
-            setPID(setpoint,_Kp,_Ki,_Kd);
-            //reset and announce tuning success
-            tuneState = 0;
-            control_val = 0;
-            getTune();
-            return true;
-        }
-        //in case there is no peak last time, save time for another peak
-        peakTime = now;
-        peakMax = setpoint;
-        peakMin = setpoint;
+    t1 = 0;
+    t2 = 0;
+    if (zn == pid::modeNoTune){
+      tuneState = 0;
     }
-    //save input and announce false
-    lastInput = *input;
-    return false;
+    else tuneState = 1;
+}
+bool pid::tuned(unsigned long run_time){
+  if(tuneState ==0) return 1;
+
+  double kpConst, tiConst, tdConst;
+  if (ZN_Mode == modeBasic){
+    kpConst = 0.6;
+    tiConst = 0.5;
+    tdConst = 0.125;
+  }
+  else if (ZN_Mode == modeLessOvershoot){ //overshoot is 10-20% base on setpoint and ~0.2s settling time, not recommence for set point < 350 since higher overshoot and longer settling time
+    kpConst = 0.15;
+    tiConst = 1.2;
+    tdConst = 0.33;
+
+  }
+  else if (ZN_Mode == modeNoOvershoot){ // overshoot ~5%, won't work on high set point. Best on set point = 200 - 350 
+    kpConst = 0.06;
+    tiConst = 1.8;
+    tdConst = 0.33;
+    
+  }
+  else if (ZN_Mode == modeHighRespond){
+    kpConst = 0.7;
+    tiConst = 0.5;
+    tdConst = 0.125;
+    
+  }
+  else {
+    return 1;
+  }
+  //save overshoot and undershoot
+  if(*input > peakMax) peakMax = *input;
+  if(*input < peakMin) peakMin = *input;
+  //relay is on and input signal reached the setpoint
+  if(control_val == relayON && *input >= setpoint){
+    control_val = relayOFF;
+    t1 = millis();
+    tHigh = t1 - t2;
+  }
+  if(control_val != relayON && *input < setpoint){
+    control_val = relayON;
+    t2 = millis();
+    tLow = t2 - t1;
+    double a = (peakMax - peakMin)/2.0;
+    double h = relayON - relayOFF;
+    
+    if (a >= 1e-9) {
+      double Ku = (4.0*h)/(Pi*a);
+      double Tu = (tLow + tHigh)*0.001;
+
+      double _Kp = kpConst*Ku;
+      double _Ki = _Kp/(tiConst*Tu)*SAMPLE_TIME;
+      double _Kd = (tdConst*_Kp*Tu)/SAMPLE_TIME;
+
+      if(ZN_count >= 1){
+        kp += _Kp;
+        ki += _Ki;
+        kd += _Kd;
+      }
+    }
+    //reset minimum
+    peakMin = setpoint;
+    peakMax = setpoint;
+    ZN_count ++;
+  }
+  //if get enough cycle, compute average
+  if (ZN_count >= ZN_cycle){
+    control_val = relayOFF;
+    kp = kp/(ZN_count - 1);
+    ki = ki/(ZN_count - 1);
+    kd = kd/(ZN_count - 1);
+    tuneState = 0;
+    getTune(run_time);
+    return 1;
+  }
+  return 0;
+}
+
+void pid::getTune(long time){
+  double Kp, Ki, Kd;
+  getPID(&Kp, &Ki, &Kd);
+  Serial.print("Tuned! "); Serial.println(time);
+  Serial.print("Kp:"); Serial.println(Kp);
+  Serial.print("Ki:"); Serial.println(Ki);
+  Serial.print("Kd:"); Serial.println(Kd);
 }
 void pid::tuneCancel(){
     tuneState = 0;
     control_val = 0;
-    peakTime =0; peakMax =0; peakMin =0;
 }
 void pid::getPID(double* _Kp, double* _Ki, double* _Kd){
     *_Kp = kp;
@@ -95,18 +154,7 @@ void motor::init(){
   pinMode(enB, 0);
 }
 void motor::setPwmFrequency(double frequency) {
-  topValue = (int)((16000000.0 / frequency) - 1.0);
 
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TCCR1A |= (1 << COM1A1) | (1 << COM1B1);
-
-  TCCR1A |= (1 << WGM11);
-  TCCR1B |= (1 << WGM13) | (1 << WGM12);
-  
-  ICR1 = topValue; 
-  
-  TCCR1B |= (1 << CS10);
 }
 motor::motor(int _pinA, int _pinB, int _PWM, int _enA, int _enB, volatile long* _pulse){
   pinA = _pinA;
@@ -133,17 +181,20 @@ void motor::control(int dir, int power) {
   }
 }
 double motor::rpm(){
-  unsigned long now = millis();
+  now = millis();
+  if ((now - lastMeasure) <= 1000*SAMPLE_TIME) return filteredVal;
   noInterrupts();
   long getEnc = *pulse;
   interrupts();
   double dt = (double)(now - lastMeasure)*0.001;
+  if (dt <= 1e-5) return filteredVal;
   long pulseDiff = getEnc - lastEnc;
   double u =0;
-  if (dt >= 1e-6 && pulseDiff >= 0.1){
   u = ((double)pulseDiff*60)/(4*11*9.6*dt);
+  if (u <= 1){
+    u = 0;
+    filteredVal = 0;
   }
-  else return 0.0001;
   switch (rpm_mode)
   {
   case 1:
@@ -155,9 +206,16 @@ double motor::rpm(){
   default:
     break;
   }
+  filteredVal = u;
   lastMeasure = now;
   lastEnc = getEnc;
   return u;
+}
+void motor::resetCounter() {
+  *pulse =0;
+  filteredVal = 0;
+  lastMeasure = 0;
+  lastEnc = 0;
 }
 void motor::filter_medium(double* val){
   buffer[filterCount] = *val;
@@ -178,7 +236,7 @@ void motor::filter_medium(double* val){
 void motor::filter_lowpass(double* val){
   double signal = *val;
   double alpha =0;
-  if (abs(signal-filteredVal) <= FILTER_THRESHOLD){
+  if ((abs(signal-filteredVal)/signal) <= FILTER_THRESHOLD){
     alpha = FILTER_ALPHA_SLOW;
   }
   else{
@@ -190,12 +248,4 @@ void motor::filter_lowpass(double* val){
 void motor::config(double frequency, int filterMode){
   rpm_mode = filterMode;
   setPwmFrequency(frequency);
-}
-void pid::getTune(){
-  double Kp, Ki, Kd;
-  getPID(&Kp, &Ki, &Kd);
-  Serial.println("Tuned!");
-  Serial.print("Kp:"); Serial.println(Kp);
-  Serial.print("Ki:"); Serial.println(Ki);
-  Serial.print("Kd:"); Serial.println(Kd);
 }
