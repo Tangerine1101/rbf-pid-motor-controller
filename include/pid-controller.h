@@ -68,7 +68,7 @@ class motor {
     #define FILTER_MODE 3
     #define FILTER_ALPHA_FAST 0.4 //the lower alpha is the delayer the signal is
     #define FILTER_ALPHA_SLOW 0.1
-    #define FILTER_THRESHOLD 0.3 //percentage
+    #define FILTER_THRESHOLD 0.35 //percentage
     //measure related
     volatile long* pulse;
     long lastEnc = 0;

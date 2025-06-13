@@ -19,12 +19,13 @@ struct sys_per {
   double time_settle; //time needed to read final value with 5% error
   double cached[10];   //cached to calculate steady state value
   unsigned int counter; 
-  double timer;
+  unsigned long timer;
   bool flag_settle;
+  bool flag_risen, flag_risen_low;
 };
 
 void SysPer_init(sys_per* system, sys_criteria* criteria, double setpoint, double Ess, double POT, double Tr, double Tss);
-bool evaluate(sys_per* system, sys_criteria criteria, double val, double runtime);
+bool evaluate(sys_per* system, sys_criteria criteria, double val, unsigned long runtime);
 void printCSV(float x, float y);
 void print_performance(sys_per sys, sys_criteria criteria, double limit);
 void teleplot(double time, double value);

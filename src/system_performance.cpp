@@ -15,13 +15,15 @@ void SysPer_init(sys_per* system, sys_criteria* criteria, double setpoint, doubl
   system->counter =0;
   system->highest_val =0;
   system->flag_settle =0;
+  system->flag_risen =0;
+  system->flag_risen_low =0;
   system->timer =0;
   for (int i =0; i <10; i++){
     system->cached[i] = 0;
   }
 }
 
-bool evaluate(sys_per* system, sys_criteria criteria, double val, double runtime) {
+bool evaluate(sys_per* system, sys_criteria criteria, double val, unsigned long runtime) {
   //steady state = average of 3 last value
   system->cached[system->counter] = val;
   system->counter = (system->counter + 1) % 10;
@@ -44,17 +46,19 @@ bool evaluate(sys_per* system, sys_criteria criteria, double val, double runtime
     }
   }
   //time rise calculate
-  if(val >= criteria.setpoint*0.1 && system->timer == 0) {
+  /*if(val >= criteria.setpoint*0.1 && !system->flag_risen_low){
     system->timer = runtime;
+    system->flag_risen_low = 1;
+    system->flag_risen =0;
   }
-  else if(val > criteria.setpoint*0.9 && system->timer != -1){ //change to else if for better performance
-    system->time_rise = runtime - system->timer;
-    system->timer = -1;
-  }
+  else if (val >= criteria.setpoint*0.9 && !system->flag_risen){
+    if(runtime > system->timer) system->time_rise = (runtime > system->timer)*0.001;
+    system->flag_risen =1;
+  }*/
   //time settle calculate
   double rate = 0.05;
   if((val >= criteria.setpoint*(1- rate) && val <= criteria.setpoint*(1+rate)) && system->flag_settle != 1){
-    system->time_settle = runtime;
+    system->time_settle = runtime*0.001;
     system->flag_settle = 1;
   }
   else if(val < criteria.setpoint*(1- rate) || val > criteria.setpoint*(1 + rate)){

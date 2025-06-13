@@ -11,8 +11,7 @@ void pid::pidCompute(){
     error = setpoint - *input;
     dE = (error- lastE );
     lowpassFilter(&dE);
-    if (control_val < 1000 && control_val >0)
-    sumE += error;
+    if (control_val < 1000 && control_val >0) sumE += error;
     sumE = constrain(sumE, 0, 1000);
     double pid_val = this->kp*error + this->ki*sumE + this->kd*dE;
     control_val = constrain(pid_val, 0, 1000);
@@ -61,14 +60,14 @@ bool pid::tuned(unsigned long run_time){
     tdConst = 0.125;
   }
   else if (ZN_Mode == modeLessOvershoot){ //overshoot is 10-20% base on setpoint and ~0.2s settling time, not recommence for set point < 350 since higher overshoot and longer settling time
-    kpConst = 0.44;
-    tiConst = 0.4;
+    kpConst = 0.33;
+    tiConst = 0.9;
     tdConst = 0.33;
 
   }
   else if (ZN_Mode == modeNoOvershoot){ // overshoot ~5%, won't work on high set point. Best on set point = 200 - 350 
     kpConst = 0.33;
-    tiConst = 0.6;
+    tiConst = 1.2;
     tdConst = 0.33;
     
   }

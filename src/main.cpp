@@ -14,7 +14,7 @@ void encoderISR(){
 }
 motor myMotor(7, 8, 9, 2, 3, &enCount);
 //pid & system evaluation related
-double Setpoint = 200;
+double Setpoint = 400;
 double signal = myMotor.rpm();
 pid controller(Setpoint, &signal);
 sys_per outputVal;
@@ -30,6 +30,10 @@ unsigned long runtime() {
   else {
     return 0;
   }
+}
+void reset_runtime(){
+  wait = millis();
+  outputVal.timer = 0;
 }
 //raw rpm
 unsigned long raw_now, raw_lastMeasure;
@@ -53,21 +57,25 @@ double rawRPM(){
   return u;
 }
 //get data
+void getData();
+void singleRun();
 const int runLimit = 5;
 unsigned int runs_count = 0;
 double initialError = Setpoint;
 void reset(double sp){
+  enCount =0;
   SysPer_init(&outputVal, &criteria, Setpoint, 2, 25, 0.2, 0.3);
   double Kp, Ki, Kd;
   controller.getPID(&Kp, &Ki, &Kd);
   controller.setPID(sp, Kp, Ki, Kd);
   myMotor.resetCounter();
-  wait = millis();
+  reset_runtime();
   initialError = Setpoint;
   flag_tuned =0;
 
 }
 void resetTuner(double sp, double initE){
+  enCount =0;
   controller.kp = 0;
   controller.ki = 0;
   controller.kd = 0;
@@ -103,41 +111,42 @@ void setup(){
   controller.setPID(Setpoint, 0, 0, 0);
   myMotor.init();
   myMotor.config(15e3, LOW_PASS); //config PWM frequency(not developed yet) and rpm filter mode(LOW_PASS and MEDIUM)
-  controller.tuneInit(1000, 0, pid::modeNoOvershoot); //config tuning (High value, Low value, mode)
+  controller.tuneInit(1000, 0, pid::modeLessOvershoot); //config tuning (High value, Low value, mode)
   attachInterrupt(digitalPinToInterrupt(myMotor.enA), encoderISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(myMotor.enB), encoderISR, CHANGE);
   while(!Serial);  
-  myMotor.control(FORWARD, 100);
-  noInterrupts();
-  Serial.println("<Taking data v0.1>");
+  Serial.println("<Taking data v0.2>");
   Serial.println("Set point, initial error, Kp, Ki, Kd, steady state error, steady state value, overshoot, time rise, time settle");
-  delay(2000);
-  interrupts();
-  wait = millis();
+  //myMotor.control(FORWARD, 1000);
+  //delay(9000);
+  //myMotor.control(STOP, 0);
+  //delay(1000);
+  enCount =0;
+  reset_runtime();
   }
 //---------------------------------------------------------------------------------------------------------------------------------
 void loop() {
-  
+  getData();
 }
 
 void getData(){
-  for(Setpoint =200; Setpoint <= 500; Setpoint +=5) {
-    for(float iniE = 0; iniE <= 1.4; iniE += 0.2) {
-        for(int i =0; i <= 5; i++){
+  for(Setpoint =200; Setpoint <= 500; Setpoint +=4) {
+    for(float iniE = 0; iniE <= 1.0; iniE += 0.1) {
+        for(int i =0; i < 3; i++){
             myMotor.control(FORWARD, 0);
-            delay(200);
+            delay(100);
             reset(Setpoint);
             resetTuner(Setpoint, iniE);
-            while (runtime() <= 2000) {
+            while (runtime() <= 1500) {
                 unsigned long t = millis();
-                double r = (double)runtime()/1000;
+                long r = (long)runtime();
                 signal = myMotor.rpm();
 
                 if(controller.tuned(runtime()*0.001)) {
 
                     if(flag_tuned == 0){
                     myMotor.resetCounter();
-                    controller.control_val = iniE*Setpoint;
+                    controller.control_val = 1.5*iniE*Setpoint;
                     myMotor.control(FORWARD, controller.control_val);
                     //teleplot(runtime()*0.001, signal);
                     flag_tuned  = 1;
@@ -149,14 +158,14 @@ void getData(){
                         while(millis()- timer <= 10);
                     }
                     initialError = Setpoint-signal;
-                    wait = millis();
+                    reset_runtime();
                     }
                     controller.pidCompute();
                     evaluate(&outputVal, criteria, signal, r);
                 }
                 myMotor.control(FORWARD, controller.control_val);
                 //teleplot(controller.control_val*0.1, signal);
-                //aint crit = meetCriteria(outputVal, criteria)*Setpoint;
+                //int crit = meetCriteria(outputVal, criteria)*Setpoint;
                 //Serial.print(">criteria:"); Serial.println(crit);
                 while((millis() - t) <= 1000*SAMPLE_TIME);
             }
@@ -174,6 +183,46 @@ void getData(){
         }
     }
   }
-  Serial.println("<finish v0.1>");
+  Serial.println("<finish v0.2>");
   while(true);
+}
+
+void singleRun(){
+  while (runtime() <= 5000 ) {
+    unsigned long t = millis();
+    long r = (long)runtime();
+    signal = myMotor.rpm();
+
+    if(controller.tuned(runtime()*0.001)) {
+        if(flag_tuned == 0){
+        myMotor.resetCounter();
+        //teleplot(runtime()*0.001, signal);
+        flag_tuned  = 1;
+        initialError = Setpoint-signal;
+        delay(1000);
+        reset_runtime();
+        }
+        controller.pidCompute();
+        bool i =evaluate(&outputVal, criteria, signal, r);
+    }
+    myMotor.control(FORWARD, controller.control_val);
+    teleplot(controller.control_val*0.1, signal);
+    int crit = meetCriteria(outputVal, criteria)*Setpoint;
+    Serial.print(">criteria:"); Serial.println(crit);
+    Serial.print(">T:"); Serial.println(runtime()*0.001);
+    while((millis() - t) <= 1000*SAMPLE_TIME);
+}
+
+if (meetCriteria(outputVal, criteria) ){
+    printpid(initialError);
+    print_performance(outputVal, criteria, 1);
+}
+else{
+
+    print_performance(outputVal, criteria, 5000);
+    print_criteria(criteria);
+    printFail(0);
+}
+myMotor.control(STOP, 0);
+while(true);
 }
