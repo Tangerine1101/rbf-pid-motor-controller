@@ -102,7 +102,7 @@ bool pid::tuned(unsigned long run_time){
 
       double _Kp = kpConst*Ku;
       double _Ki = _Kp/(tiConst*Tu)*SAMPLE_TIME;
-      double _Kd = (tdConst*_Kp*  /*if(val >= criteria.setpoint*0.1 && !system->flag_risen_low){
+      double _Kd = (tdConst*_Kp*Tu)/SAMPLE_TIME;  /*if(val >= criteria.setpoint*0.1 && !system->flag_risen_low){
     system->timer = runtime;
     system->flag_risen_low = 1;
     system->flag_risen =0;
@@ -110,7 +110,7 @@ bool pid::tuned(unsigned long run_time){
   else if (val >= criteria.setpoint*0.9 && !system->flag_risen){
     if(runtime > system->timer) system->time_rise = (runtime > system->timer)*0.001;
     system->flag_risen =1;
-  }*/Tu)/SAMPLE_TIME;
+  }*/
 
       if(ZN_count >= 1){
         kp += _Kp;
@@ -130,7 +130,7 @@ bool pid::tuned(unsigned long run_time){
     ki = ki/(ZN_count - 1);
     kd = kd/(ZN_count - 1);
     tuneState = 0;
-    //getTune(run_time);
+    getTune(run_time);
     return 1;
   }
   return 0;
@@ -174,7 +174,8 @@ motor::motor(int _pinA, int _pinB, int _PWM, int _enA, int _enB, volatile long* 
   this->pulse = _pulse; 
 }
 void motor::control(int dir, int power) {
-  int u = map(power, 0, 1000, 0, topValue);
+  int u = map(power, 0, 1000, 25, 255);
+  if (power == 0) u = 0;
   if (dir == 0) {
     digitalWrite(pinA, 0);
     digitalWrite(pinB, 0);
@@ -245,7 +246,7 @@ void motor::filter_medium(double* val){
 void motor::filter_lowpass(double* val){
   double signal = *val;
   double alpha =0;
-  if ((abs(signal-filteredVal)/signal) <= FILTER_THRESHOLD){
+  if (abs(signal-filteredVal)/signal <= FILTER_THRESHOLD){
     alpha = FILTER_ALPHA_SLOW;
   }
   else{

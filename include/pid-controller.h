@@ -37,7 +37,7 @@ class pid {
         double lastE =0, dE =0, sumE =0;
         //dE filter
         double filteredDe;
-        double alpha = 0.1;
+        double alpha = 0.01;
         void lowpassFilter(double* val);
         const double dt = SAMPLE_TIME; 
     //tuner
@@ -67,7 +67,7 @@ class motor {
     //CONFIG HERE:
     #define FILTER_MODE 3
     #define FILTER_ALPHA_FAST 0.4 //the lower alpha is the delayer the signal is
-    #define FILTER_ALPHA_SLOW 0.1
+    #define FILTER_ALPHA_SLOW 0.01
     #define FILTER_THRESHOLD 0.35 //percentage
     //measure related
     volatile long* pulse;

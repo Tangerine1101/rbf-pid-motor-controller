@@ -14,7 +14,7 @@ void encoderISR(){
 }
 motor myMotor(7, 8, 9, 2, 3, &enCount);
 //pid & system evaluation related
-double Setpoint = 500;
+double Setpoint = 250;
 double signal = myMotor.rpm();
 pid controller(Setpoint, &signal);
 sys_per outputVal;
@@ -29,7 +29,7 @@ double filteredPT =0;
 unsigned int PTmeter();
 //rbf
 rbf net;
-
+void rbf_pid(double _setpoint, double _error);
 //raw rpm
 unsigned long raw_now, raw_lastMeasure;
 double raw_lastVal;
@@ -69,15 +69,34 @@ void setup(){
   }
 //---------------------------------------------------------------------------------------------------------------------------------
 void loop() {
-  singleRun();
+  Setpoint = PTmeter();
+  //singleRun();/*
+  signal = myMotor.rpm();
+  unsigned long t = runtime();
+  rbf_pid(Setpoint, Setpoint - signal);
+  myMotor.control(FORWARD, controller.control_val);
+  teleplot(Setpoint, signal);
+  Serial.print(controller.kp);Serial.print(",");
+  Serial.print(controller.ki);Serial.print(",");
+  Serial.print(controller.kd);Serial.println("");
+  myMotor.control(FORWARD, controller.control_val);
+  printCSV(t*0.001 , controller.control_val);
+  while(runtime() - t <= 10); //*/
 }
-void rbf_pid(double _setpoint, double _error){
 
+void rbf_pid(double _setpoint, double _error){
+  net.computePIDRBF(_setpoint);
+  controller.setpoint = _setpoint;
+  controller.kp = net.getKp();
+  controller.ki = net.getKi();
+  controller.kd = 0.5*net.getKd();
+  controller.pidCompute();
 }
 unsigned int PTmeter(){
-  int Ao = analogRead(A0);
+  int Ao =map(analogRead(A0),0,1024,0,550);
   double u = (0.1*Ao)+(0.9*filteredPT);
   filteredPT = u;
+
   return filteredPT;
 }
 void getData1(){

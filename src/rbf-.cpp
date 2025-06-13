@@ -1,24 +1,16 @@
 #include <Arduino.h>
 #include "rbf-.h"
-rbf::rbf(){
-  // Trọng số từ neuron 1 (khi sai số gần 0)
-  weights[0][0] = 2.0f;  // Kp
-  weights[0][1] = 1.5f;  // Ki
-  weights[0][2] = 0.5f;  // Kd
-
-  // Trọng số từ neuron 2 (khi sai số khoảng 20)
-  weights[1][0] = 1.5f;  // Kp
-  weights[1][1] = 0.9f;  // Ki
-  weights[1][2] = 0.4f;  // Kd
-
-  // Trọng số từ neuron 3 (khi sai số lớn, khoảng 100)
-  weights[2][0] = 1.0f;  // Kp
-  weights[2][1] = 0.5f;  // Ki
-  weights[2][2] = 0.3f;  // Kd
+double normalize(double x, double mean, double std) {
+  return (x - mean) / std;
+}
+double denormalize(double x_norm, double mean, double std) {
+  return x_norm * std + mean;
 }
 
+
 // Tính toán giá trị PID từ mạng RBF
-void rbf::computePIDRBF(double e) {
+void rbf::computePIDRBF(double e_raw) {
+  double e = normalize(e_raw, mean_e, std_e);
   double phi[NUM_NEURONS];
   double totalPhi = 0; // Tổng giá trị phi để chuẩn hóa
 
@@ -40,6 +32,10 @@ void rbf::computePIDRBF(double e) {
       rbf_Kd += (phi[i] / totalPhi) * weights[i][2];  // Trọng số Kd
     }
   }
+    // Phi chuẩn hóa PID
+  rbf_Kp = denormalize(rbf_Kp, mean_Kp, std_Kp);
+  rbf_Ki = denormalize(rbf_Ki, mean_Ki, std_Ki);
+  rbf_Kd = denormalize(rbf_Kd, mean_Kd, std_Kd);
 }
 double rbf::getKp(){
   return rbf_Kp;

@@ -50,7 +50,7 @@ bool evaluate(sys_per* system, sys_criteria criteria, double val, unsigned long 
     if(!system->flag_risen){
       system->timer = runtime;
     }
-    else system->time_rise = runtime - system->timer;
+    else system->time_rise = runtime - system->time_rise;
   }
   //time settle calculate
   double rate = 0.05;
@@ -77,7 +77,7 @@ void printCSV(float x, float y) {
 }
 //for teleplot extension
 void teleplot(double time, double signal){
-  Serial.print(">time:"); Serial.println(time);
+  Serial.print(">setpoint:"); Serial.println(time);
   Serial.print(">signal:"); Serial.println(signal); 
 }
 //print system evaluation in Json
