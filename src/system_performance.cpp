@@ -98,7 +98,24 @@ void print_performance(sys_per sys, sys_criteria criteria, double limit){
   Serial.print(" "); Serial.println(" }");
   Serial.println("}");
   }
+void print_criteria(sys_criteria criteria){
+  Serial.println(" {\"criteria\":{");
+  Serial.print("\"steady state error\":");Serial.print("\"");Serial.print(criteria.final_error);Serial.println("\",");
+  Serial.print("\"steady state value\":");Serial.print("\"");Serial.print(criteria.setpoint);Serial.println("\",");
+  Serial.print("\"overshoot\":");Serial.print("\"");Serial.print(criteria.overshoot);Serial.println("\",");
+  Serial.print("\"time rise\":");Serial.print("\""); Serial.print(criteria.time_rise); Serial.println("\"");
+ 
+  Serial.print("\"time settle\":");Serial.print("\"");  
+Serial.print(criteria.time_settle); Serial.println("\"");
+
+  Serial.print(" "); Serial.println(" }");
+  Serial.println("}");
+}
 bool meetCriteria(sys_per sys, sys_criteria criteria){
-  bool satisfy = sys.overshoot <= criteria.overshoot && sys.final_error <= criteria.final_error && sys.time_rise <= criteria.time_rise && sys.time_settle <= criteria.time_settle;
+  bool satisfy = (sys.overshoot <= criteria.overshoot) && (sys.final_error <= criteria.final_error) && (sys.time_rise <= criteria.time_rise) && (sys.time_settle <= criteria.time_settle);
   return satisfy;
+}
+bool reject(sys_per sys, sys_criteria criteria){
+  bool rej = sys.time_rise > criteria.time_rise || sys.time_settle > criteria.time_settle;
+  return rej;
 }

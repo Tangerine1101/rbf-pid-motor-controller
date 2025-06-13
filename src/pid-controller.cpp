@@ -9,12 +9,12 @@ pid::pid(double _Setpoint, double* _input){
 
 void pid::pidCompute(){
     error = setpoint - *input;
-    sumE += error;
     dE = (error- lastE );
-    if (control_val < 1000 && control_val >0)
-    sumE = constrain(sumE, 0, 1000);
     lowpassFilter(&dE);
-    double pid_val = kp*error + ki*sumE + kd*dE;
+    if (control_val < 1000 && control_val >0)
+    sumE += error;
+    sumE = constrain(sumE, 0, 1000);
+    double pid_val = this->kp*error + this->ki*sumE + this->kd*dE;
     control_val = constrain(pid_val, 0, 1000);
     lastE = error;
 }
@@ -31,6 +31,7 @@ void pid::setPID(double _Setpoint, double _Kp, double _Ki, double _Kd){
     ki = _Ki;
     kd = _Kd;
     setpoint = _Setpoint;
+    error =0;
     lastE =0; dE =0; sumE =0;    
     filteredDe = 0;
 }
@@ -44,6 +45,7 @@ void pid::tuneInit(double high, double low, ZNmode zn){
     peakMin = setpoint;
     t1 = 0;
     t2 = 0;
+    tLow =0; tHigh =0;
     if (zn == pid::modeNoTune){
       tuneState = 0;
     }
@@ -59,14 +61,14 @@ bool pid::tuned(unsigned long run_time){
     tdConst = 0.125;
   }
   else if (ZN_Mode == modeLessOvershoot){ //overshoot is 10-20% base on setpoint and ~0.2s settling time, not recommence for set point < 350 since higher overshoot and longer settling time
-    kpConst = 0.15;
-    tiConst = 1.2;
+    kpConst = 0.44;
+    tiConst = 0.4;
     tdConst = 0.33;
 
   }
   else if (ZN_Mode == modeNoOvershoot){ // overshoot ~5%, won't work on high set point. Best on set point = 200 - 350 
-    kpConst = 0.06;
-    tiConst = 1.8;
+    kpConst = 0.33;
+    tiConst = 0.6;
     tdConst = 0.33;
     
   }
@@ -121,7 +123,7 @@ bool pid::tuned(unsigned long run_time){
     ki = ki/(ZN_count - 1);
     kd = kd/(ZN_count - 1);
     tuneState = 0;
-    getTune(run_time);
+    //getTune(run_time);
     return 1;
   }
   return 0;
@@ -130,10 +132,10 @@ bool pid::tuned(unsigned long run_time){
 void pid::getTune(long time){
   double Kp, Ki, Kd;
   getPID(&Kp, &Ki, &Kd);
-  Serial.print("Tuned! "); Serial.println(time);
-  Serial.print("Kp:"); Serial.println(Kp);
-  Serial.print("Ki:"); Serial.println(Ki);
-  Serial.print("Kd:"); Serial.println(Kd);
+  Serial.print("Tuned! "); Serial.print(time);
+  Serial.print("  Kp:"); Serial.print(Kp);
+  Serial.print("  Ki:"); Serial.print(Ki);
+  Serial.print("  Kd:"); Serial.println(Kd);
 }
 void pid::tuneCancel(){
     tuneState = 0;
