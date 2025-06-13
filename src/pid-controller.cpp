@@ -102,7 +102,15 @@ bool pid::tuned(unsigned long run_time){
 
       double _Kp = kpConst*Ku;
       double _Ki = _Kp/(tiConst*Tu)*SAMPLE_TIME;
-      double _Kd = (tdConst*_Kp*Tu)/SAMPLE_TIME;
+      double _Kd = (tdConst*_Kp*  /*if(val >= criteria.setpoint*0.1 && !system->flag_risen_low){
+    system->timer = runtime;
+    system->flag_risen_low = 1;
+    system->flag_risen =0;
+  }
+  else if (val >= criteria.setpoint*0.9 && !system->flag_risen){
+    if(runtime > system->timer) system->time_rise = (runtime > system->timer)*0.001;
+    system->flag_risen =1;
+  }*/Tu)/SAMPLE_TIME;
 
       if(ZN_count >= 1){
         kp += _Kp;

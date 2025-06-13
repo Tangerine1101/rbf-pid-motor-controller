@@ -46,15 +46,12 @@ bool evaluate(sys_per* system, sys_criteria criteria, double val, unsigned long 
     }
   }
   //time rise calculate
-  /*if(val >= criteria.setpoint*0.1 && !system->flag_risen_low){
-    system->timer = runtime;
-    system->flag_risen_low = 1;
-    system->flag_risen =0;
+  if (val >= criteria.setpoint*0.1 && val <=criteria.setpoint*0.9){
+    if(!system->flag_risen){
+      system->timer = runtime;
+    }
+    else system->time_rise = runtime - system->timer;
   }
-  else if (val >= criteria.setpoint*0.9 && !system->flag_risen){
-    if(runtime > system->timer) system->time_rise = (runtime > system->timer)*0.001;
-    system->flag_risen =1;
-  }*/
   //time settle calculate
   double rate = 0.05;
   if((val >= criteria.setpoint*(1- rate) && val <= criteria.setpoint*(1+rate)) && system->flag_settle != 1){
