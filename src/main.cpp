@@ -89,7 +89,7 @@ void printpid(float initError){
   //Serial.print("Ki:"); 
   Serial.print(Ki); Serial.print(", ");
   //Serial.print("Kd:"); 
-  Serial.println(Kd);
+  Serial.print(Kd); Serial.print(", ");
 }
 void printFail(int count){
     Serial.print("Run fail, time:"); 
@@ -109,18 +109,23 @@ void setup(){
   while(!Serial);  
   myMotor.control(FORWARD, 100);
   noInterrupts();
-  Serial.println("<Taking data>");
+  Serial.println("<Taking data v0.1>");
+  Serial.println("Set point, initial error, Kp, Ki, Kd, steady state error, steady state value, overshoot, time rise, time settle");
   delay(2000);
   interrupts();
   wait = millis();
   }
 //---------------------------------------------------------------------------------------------------------------------------------
 void loop() {
-  for(Setpoint =300; Setpoint <= 500; Setpoint +=10) {
+  
+}
+
+void getData(){
+  for(Setpoint =200; Setpoint <= 500; Setpoint +=5) {
     for(float iniE = 0; iniE <= 1.4; iniE += 0.2) {
         for(int i =0; i <= 5; i++){
             myMotor.control(FORWARD, 0);
-            delay(500);
+            delay(200);
             reset(Setpoint);
             resetTuner(Setpoint, iniE);
             while (runtime() <= 2000) {
@@ -151,13 +156,14 @@ void loop() {
                 }
                 myMotor.control(FORWARD, controller.control_val);
                 //teleplot(controller.control_val*0.1, signal);
-                int crit = meetCriteria(outputVal, criteria)*Setpoint;
+                //aint crit = meetCriteria(outputVal, criteria)*Setpoint;
                 //Serial.print(">criteria:"); Serial.println(crit);
                 while((millis() - t) <= 1000*SAMPLE_TIME);
             }
 
             if (meetCriteria(outputVal, criteria) ){
                 printpid(initialError);
+                print_performance(outputVal, criteria, 1);
                 break;
             }
             else{
@@ -168,4 +174,6 @@ void loop() {
         }
     }
   }
+  Serial.println("<finish v0.1>");
+  while(true);
 }
