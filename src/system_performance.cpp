@@ -83,7 +83,7 @@ void teleplot(double time, double signal){
 //print system evaluation in Json
 void print_performance(sys_per sys, sys_criteria criteria, double limit){
   //Json format
-  /*Serial.println(" {\"evaluation\":{");
+  Serial.println(" {\"evaluation\":{");
   Serial.print("\"steady state error\":");Serial.print("\"");Serial.print(sys.final_error);Serial.println("\",");
   Serial.print("\"steady state value\":");Serial.print("\"");Serial.print(sys.final_val);Serial.println("\",");
   Serial.print("\"overshoot\":");Serial.print("\"");Serial.print(sys.overshoot);Serial.println("\",");
@@ -98,9 +98,9 @@ void print_performance(sys_per sys, sys_criteria criteria, double limit){
   Serial.println("\"");
 
   Serial.print(" "); Serial.println(" }");
-  Serial.println("}");*/
+  Serial.println("}");
   //Serial.println(" {\"evaluation\":{");
-  
+/*  
   //CSV format
 //  Serial.print("\"steady state error\":");Serial.print("\"");
   Serial.print(sys.final_error);Serial.print(", ");
@@ -112,7 +112,7 @@ void print_performance(sys_per sys, sys_criteria criteria, double limit){
   Serial.print(sys.time_rise);
 
   Serial.print(" ,");
- 
+ */
 //  Serial.print("\"time settle\":");Serial.print("\"");  
   if (sys.time_settle <= limit) {Serial.print(sys.time_settle);}
   else Serial.print("inf"); 

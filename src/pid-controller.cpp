@@ -174,7 +174,7 @@ motor::motor(int _pinA, int _pinB, int _PWM, int _enA, int _enB, volatile long* 
   this->pulse = _pulse; 
 }
 void motor::control(int dir, int power) {
-  int u = map(power, 0, 1000, 25, 255);
+  int u = map(power, 0, 1000, 0, 255);
   if (power == 0) u = 0;
   if (dir == 0) {
     digitalWrite(pinA, 0);

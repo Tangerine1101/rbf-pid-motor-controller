@@ -13,8 +13,12 @@ void encoderISR(){
   enCount++;
 }
 motor myMotor(7, 8, 9, 2, 3, &enCount);
+//Experiment
+double expr[7] ={350, 400, 150, 300, 200, 450, 125};
+int  exp_count =1;
+unsigned long exp_time =0;
 //pid & system evaluation related
-double Setpoint = 250;
+double Setpoint = expr[0];
 double signal = myMotor.rpm();
 pid controller(Setpoint, &signal);
 sys_per outputVal;
@@ -27,6 +31,7 @@ unsigned long runtime();
 void reset_runtime();
 double filteredPT =0;
 unsigned int PTmeter();
+double Last_setpoint;
 //rbf
 rbf net;
 void rbf_pid(double _setpoint, double _error);
@@ -54,7 +59,7 @@ void setup(){
   controller.setPID(Setpoint, 0, 0, 0);
   myMotor.init();
   myMotor.config(15e3, LOW_PASS); //config PWM frequency(not developed yet) and rpm filter mode(LOW_PASS and MEDIUM)
-  controller.tuneInit(1000, 0, pid::modeHighRespond); //config tuning (High value, Low value, mode)
+  controller.tuneInit(1000, 0, pid::modeNoOvershoot); //config tuning (High value, Low value, mode)
   attachInterrupt(digitalPinToInterrupt(myMotor.enA), encoderISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(myMotor.enB), encoderISR, CHANGE);
   while(!Serial);  
@@ -66,9 +71,23 @@ void setup(){
   //delay(1000);
   enCount =0;
   reset_runtime();
+  exp_time = runtime();
   }
 //---------------------------------------------------------------------------------------------------------------------------------
 void loop() {
+  /*if(runtime() - exp_time >= 2000){
+    Serial.print("attemps"); Serial.println(exp_count);
+    print_performance(outputVal, criteria, 1);
+    Setpoint = expr[exp_count];
+    exp_count++;
+    reset(Setpoint);
+    reset_runtime();
+    exp_time = runtime();
+    if (exp_count > 7) {
+      myMotor.control(STOP, 0);
+      while(1);
+    }
+  }*/
   Setpoint = PTmeter();
   //singleRun();/*
   signal = myMotor.rpm();
@@ -89,17 +108,17 @@ void rbf_pid(double _setpoint, double _error){
   controller.setpoint = _setpoint;
   controller.kp = net.getKp();
   controller.ki = net.getKi();
-  controller.kd = 0.5*net.getKd();
+  controller.kd = net.getKd();
   controller.pidCompute();
 }
 unsigned int PTmeter(){
   int Ao =map(analogRead(A0),0,1024,0,550);
-  double u = (0.1*Ao)+(0.9*filteredPT);
+  double u = (0.05*Ao)+(0.95*filteredPT);
   filteredPT = u;
 
   return filteredPT;
 }
-void getData1(){
+void getData(){
   for(Setpoint =200; Setpoint <= 500; Setpoint +=4) {
     for(float iniE = 0; iniE <= 1.0; iniE += 0.1) {
         for(int i =0; i < 3; i++){
@@ -166,10 +185,12 @@ void singleRun(){
     if(controller.tuned(runtime()*0.001)) {
         if(flag_tuned == 0){
         myMotor.resetCounter();
-        //teleplot(runtime()*0.001, signal);
+        myMotor.control(FORWARD, 0);
+        delay(10);
+        teleplot(runtime()*0.001, signal);
         flag_tuned  = 1;
         initialError = Setpoint-signal;
-        delay(1000);
+        delay(100);
         reset_runtime();
         }
         controller.pidCompute();
